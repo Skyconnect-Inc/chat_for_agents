@@ -1,0 +1,31 @@
+# Production relay — sits behind the shared Traefik proxy on the `web` network.
+# Traefik routes Host(`relay-3456.skyconnect.co.tz`) -> http://chatagents-relay:8000
+# (see deploy/traefik-relay.yml). No host port is published; ingress is Traefik only.
+services:
+  relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chatagents-relay
+    container_name: chatagents-relay
+    restart: unless-stopped
+    environment:
+      # Substituted into GET /install.sh so `curl https://relay-3456.skyconnect.co.tz/install.sh | sh` works.
+      CHATAGENTS_REPO_URL: ${CHATAGENTS_REPO_URL:-https://github.com/GodsonNtungi/chat_for_agents.git}
+    volumes:
+      - relay-data:/data
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  relay-data:
+
+networks:
+  web:
+    external: true

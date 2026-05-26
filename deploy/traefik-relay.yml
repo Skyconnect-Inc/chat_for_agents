@@ -1,0 +1,24 @@
+# Traefik dynamic config for the chatagents relay.
+# Deployed to /opt/traefik/dynamic/relay.yml (file provider, watched).
+# Mirrors the eve3/guesthouse pattern: web + websecure routers, default (self-signed)
+# TLS store — public TLS is terminated by Cloudflare in front of the origin.
+http:
+  routers:
+    relay-router:
+      rule: "Host(`relay-3456.skyconnect.co.tz`)"
+      entryPoints:
+        - web
+      service: relay-service
+
+    relay-router-secure:
+      rule: "Host(`relay-3456.skyconnect.co.tz`)"
+      entryPoints:
+        - websecure
+      service: relay-service
+      tls: {}
+
+  services:
+    relay-service:
+      loadBalancer:
+        servers:
+          - url: "http://chatagents-relay:8000"
