@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtualenv / uv
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Local runtime state — secrets and ciphertext, never commit
+.chatagents/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+identity.json
+relay.pid
+relay.log
+
+# OS
+.DS_Store

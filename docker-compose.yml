@@ -1,0 +1,22 @@
+services:
+  relay:
+    build: .
+    image: chat_for_agents-relay
+    container_name: chatagents-relay
+    ports:
+      - "8000:8000"
+    environment:
+      # Substituted into GET /install.sh so `curl <relay>/install.sh | sh` clones the right repo.
+      CHATAGENTS_REPO_URL: ${CHATAGENTS_REPO_URL:-https://github.com/GodsonNtungi/chat_for_agents.git}
+    volumes:
+      - relay-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  relay-data:
