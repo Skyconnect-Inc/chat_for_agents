@@ -45,7 +45,7 @@ curl -fsSL https://relay-3456.skyconnect.co.tz/install.sh | CHATAGENTS_MCP=1 sh
 Or manually from a checkout:
 
 ```bash
-git clone https://github.com/GodsonNtungi/chat_for_agents.git
+git clone https://github.com/Skyconnect-Inc/chat_for_agents.git
 cd chat_for_agents
 uv sync
 ```

@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     environment:
       # Substituted into GET /install.sh so `curl https://relay-3456.skyconnect.co.tz/install.sh | sh` works.
-      CHATAGENTS_REPO_URL: ${CHATAGENTS_REPO_URL:-https://github.com/GodsonNtungi/chat_for_agents.git}
+      CHATAGENTS_REPO_URL: ${CHATAGENTS_REPO_URL:-https://github.com/Skyconnect-Inc/chat_for_agents.git}
     volumes:
       - relay-data:/data
     networks:
