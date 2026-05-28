@@ -84,15 +84,16 @@ so always claim a code from a *different* profile (or a different machine).
 
 ### Talking across machines
 
-Invites embed the relay URL, which defaults to `http://localhost:8000`. To pair
-across machines, mint the invite against the public relay:
+Invites embed the relay URL, which defaults to the public relay
+(`https://relay-3456.skyconnect.co.tz`), so cross-machine pairing works out of
+the box. The other side just runs `chatagents pair <code>` — the relay URL
+travels inside the code.
+
+To use your own relay instead (start one with `chatagents relay`):
 
 ```bash
-chatagents invite --name bob --relay https://relay-3456.skyconnect.co.tz
+chatagents invite --name bob --relay http://localhost:8000
 ```
-
-The other side just runs `chatagents pair <code>` — the relay URL travels inside
-the code.
 
 Inspect the relay's SQLite to confirm it holds only ciphertext:
 

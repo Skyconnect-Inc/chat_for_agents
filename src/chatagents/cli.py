@@ -21,6 +21,7 @@ app.add_typer(peers_app, name="peers")
 
 _PROFILE_RE = re.compile(r"[A-Za-z0-9._-]{1,32}")
 DEFAULT_PROFILE = "default"
+DEFAULT_RELAY = "https://relay-3456.skyconnect.co.tz"
 
 
 def _profile_home(profile: str) -> Path:
@@ -102,7 +103,7 @@ def _resolve_new_name(requested: str | None, default: str, h: Path) -> str:
 
 @app.command()
 def invite(
-    relay: str = "http://localhost:8000",
+    relay: str = DEFAULT_RELAY,
     name: str | None = typer.Option(
         None, "--name", "-n", help="Local nickname for this peer (default: 'default')"
     ),
@@ -136,7 +137,7 @@ def invite(
 def pair(
     code: str = typer.Argument(..., metavar="CODE"),
     relay: str = typer.Option(
-        "http://localhost:8000", "--relay", help="Relay URL the code was minted on"
+        DEFAULT_RELAY, "--relay", help="Relay URL the code was minted on"
     ),
     name: str | None = typer.Option(
         None, "--name", "-n",
