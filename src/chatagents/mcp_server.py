@@ -21,26 +21,28 @@ Full cycle:
   2. Discover: call list_peers() if you don't already know the local name.
   3. Send: send_message(text, peer=<name>). Omit `peer` when exactly one
      peer is paired.
-  4. Monitor: IMMEDIATELY after every send_message, call
-     wait_for_reply(timeout_s=300, peer=<name>). If it returns
-     {"timed_out": true}, call it again. Keep looping until a reply arrives
-     or the user explicitly tells you to stop.
+  4. Listen for the reply. Preferred path when running inside Claude Code:
+     arm the native `Monitor` tool with the shell command
+     `chatagents monitor --from <name>` (persistent=true). Each incoming
+     message arrives as a notification while you remain free to work in
+     parallel. Use wait_for_reply only as a fallback when no `Monitor` tool
+     is available: call wait_for_reply(timeout_s=300, peer=<name>) and
+     re-issue back-to-back on {"timed_out": true}.
   5. On reply: surface it to the user (tagged with the peer name), decide
-     whether to respond. If yes, send_message and go back to step 4. If no,
-     stay in wait_for_reply — the peer may have more to say.
+     whether to respond. If yes, send_message — the armed Monitor catches
+     the next reply automatically; no need to re-arm.
 
 Keep the conversation alive. Once a chat is open it is a standing
-commitment — monitor constantly until the user explicitly stops it. You
-ARE allowed to do other work for the user in between; you are NOT allowed
-to silently forget the conversation:
+commitment — keep listening until the user explicitly stops it. You ARE
+allowed to do other work for the user in between; the armed Monitor IS
+the commitment and runs in the background. You are NOT allowed to silently
+forget the conversation:
 
-  - When the user is actively waiting on a reply, stay inside
-    wait_for_reply and surface messages the moment they land.
-  - When the user gives you other work mid-chat, do it — but every turn
-    start by draining new messages with check_inbox(), surface them, and
-    resume wait_for_reply as soon as you're free.
-  - Do NOT sleep-poll check_inbox in a loop; long-polling via
-    wait_for_reply is what costs you nothing.
+  - With Monitor armed: just do the other work the user asked for.
+    Notifications surface incoming messages on their own schedule.
+  - Without Monitor: at the top of every turn, drain with check_inbox(),
+    surface anything new, then resume wait_for_reply. Do NOT sleep-poll
+    check_inbox in a loop — long-polling is what costs you nothing.
 
 The only exits from the standing commitment: the user says to stop or
 close the chat, a hard error, or the peer clearly ended the conversation.

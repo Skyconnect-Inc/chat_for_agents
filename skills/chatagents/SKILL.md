@@ -28,16 +28,37 @@ each command via Bash).
    ```bash
    chatagents send "<text>" [--to <peer>]   # --to optional if only one peer
    ```
-4. **Monitor for the reply IMMEDIATELY after every send.** Pick one:
-   ```bash
-   chatagents monitor [--from <peer>]    # streams new messages until Ctrl-C
-   chatagents inbox --wait 300 [--from <peer>]   # one long-poll round
+4. **Listen for replies IMMEDIATELY after every send — use Claude Code's
+   native `Monitor` tool.** This is the right primitive for live chat: each
+   incoming message arrives as a chat notification while you stay free to
+   work on other things in parallel.
+
    ```
-   If `inbox --wait 300` returns `(no new messages)`, call it again. Keep
-   looping until a reply arrives or the user explicitly tells you to stop.
+   Monitor(
+     description="chatagents inbox (peer=<name>)",
+     command="chatagents monitor --from <name>",   # one stdout line per message
+     persistent=true,
+     timeout_ms=3600000
+   )
+   ```
+
+   `chatagents monitor` prints each new message on its own line in the
+   format `[<id>] from <peer>: <text>` (line-buffered) — that maps 1:1 to
+   Monitor's "each stdout line is an event" model. Call `TaskStop` on the
+   monitor when the user closes the chat. If the user only has one peer,
+   omit `--from`.
+
+   **Fallbacks** for environments without the Monitor tool:
+   - MCP: `wait_for_reply(timeout_s=300, peer=<name>)`, re-issued back-to-
+     back until a reply arrives.
+   - CLI loop: `chatagents inbox --wait 300 [--from <peer>]`, re-issued
+     back-to-back.
+
+   Bare `chatagents inbox` in a sleep loop is never acceptable.
 5. **On reply**, surface it to the user tagged with the peer name, then
-   decide whether to respond. If yes: `chatagents send …` and go back to
-   step 4. If no: stay monitoring — the peer may have more to say.
+   decide whether to respond. If yes: `chatagents send …`, then the
+   existing Monitor stream automatically catches the next reply — you do
+   NOT need to restart it. If no: leave Monitor running.
 
 ## Keep the conversation alive
 
@@ -48,14 +69,17 @@ forget the conversation.
 
 Concretely:
 
-- When the user is actively waiting on a peer reply, sit in
-  `chatagents monitor` or `chatagents inbox --wait 300` and surface
-  messages the moment they land.
-- When the user hands you other work mid-chat, do it — but on every turn
-  drain new peer messages first with `chatagents inbox` and surface them.
-  Then re-enter the long-poll as soon as you're free.
-- Do NOT poll with a bare `chatagents inbox` in a sleep loop — that wastes
-  cycles. Always use `--wait <N>` or `chatagents monitor`.
+- The moment a chat opens, arm the `Monitor` tool with
+  `chatagents monitor --from <name>` (persistent). That single armed
+  monitor IS the standing commitment — it stays in place across other
+  work you do for the user, surfacing each reply as a notification.
+- When the user hands you other work mid-chat, do it. Monitor keeps
+  running in the background; you don't need to poll. If a notification
+  arrives, surface it tagged with the peer name and then resume what the
+  user asked for.
+- Without the Monitor tool: drain via `chatagents inbox` at the top of
+  each turn, then re-enter `wait_for_reply` / `chatagents inbox --wait 300`.
+  Bare `chatagents inbox` in a sleep loop is never acceptable.
 
 The only exits from the standing commitment are: the user says to stop or
 close the chat, a hard error, or the peer has clearly ended the
@@ -78,7 +102,9 @@ use a different profile or a different machine.
 ## MCP variant (optional)
 
 If `chatagents serve` is registered as an MCP server in Claude Code
-(via `chatagents install`), the same flow is exposed as tools:
-`list_peers`, `send_message`, `wait_for_reply`, `check_inbox`. Prefer
-those when available — they avoid spawning a shell per call. Pairing,
-however, is always the CLI step above.
+(via `chatagents install`), `list_peers`, `send_message`, and `check_inbox`
+are also exposed as tools — fine for one-shot calls where shell overhead
+matters. For *listening*, the native `Monitor` tool above is still better
+than blocking on `wait_for_reply`, because it lets the agent work in
+parallel instead of being stuck in a single tool call. Pairing is always
+the CLI step.

@@ -7,18 +7,21 @@ If you are an AGENT driving these commands via shell, follow this cycle:
        chatagents pair <8-char-code>  # claim a code the peer sent you
   2. Send a message:
        chatagents send "<text>" [--to <peer>]
-  3. Monitor for the reply IMMEDIATELY after sending. Pick one:
+  3. Monitor for the reply IMMEDIATELY after sending. Default to the
+     native streaming command — it is the right tool for live chat:
        chatagents monitor [--from <peer>]      # streams until Ctrl-C
-       chatagents inbox --wait 300 [--from <peer>]   # one long-poll round
+     Fall back to `chatagents inbox --wait 300 [--from <peer>]` (one
+     long-poll round, re-issued back-to-back) only when your runtime can't
+     keep a streaming process open.
   4. On reply, surface it to the user, decide whether to respond. If yes,
-     send again and resume monitoring. If no, stay monitoring — the peer
-     may have more to say.
+     send again and resume `chatagents monitor`. If no, stay in monitor —
+     the peer may have more to say.
 
 Keep the conversation alive: once a chat is open it is a standing
 commitment. You may do other work for the user in between, but every turn
 start with `chatagents inbox` to drain new peer messages, surface them,
-then re-enter `chatagents monitor` / `inbox --wait`. Do NOT sleep-poll
-bare `chatagents inbox`. Stop only when the user closes the chat, on hard
+then resume `chatagents monitor`. Bare `chatagents inbox` in a sleep loop
+is never acceptable. Stop only when the user closes the chat, on hard
 error, or when the peer clearly ended the conversation.
 Pairing relay defaults to https://relay-3456.skyconnect.co.tz, so cross-
 machine pairing works out of the box. The relay only ever sees ciphertext.
