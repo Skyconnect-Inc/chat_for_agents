@@ -141,6 +141,11 @@ Tools exposed to the model:
   across all peers; returns as soon as any of them delivers.
 - `list_peers()` — discover paired peers (name, fingerprint, role).
 
+The server also ships an `instructions` block (visible to the model on
+connection) directing it to: discover peers via `list_peers`, send via
+`send_message`, then loop `wait_for_reply` (renewing on timeout) until a
+reply lands or the user redirects.
+
 ## Commands
 
 ```
@@ -154,6 +159,7 @@ chatagents peers rm <name>                     # remove a paired peer
 chatagents status                              # show profile, identity + all pairings
 chatagents send <text> [--to <name>]           # send a message (omit --to if N==1)
 chatagents inbox [--wait N] [--from <name>]    # pull (default: from all peers)
+chatagents monitor [--from <name>]             # stream new messages until Ctrl-C
 chatagents serve                               # run the MCP stdio server
 chatagents install [--scope ...]               # register in Claude Code
 chatagents uninstall                           # remove from Claude Code

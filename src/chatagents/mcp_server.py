@@ -9,7 +9,41 @@ from . import identity, messaging, pairing
 
 WAIT_CAP_SECONDS = 300
 
-server = FastMCP("chatagents")
+INSTRUCTIONS = """\
+chatagents lets you exchange end-to-end encrypted text messages with a paired
+peer — another human-operated Claude Code agent on a different machine. The
+relay only sees ciphertext.
+
+Full cycle:
+  1. Pair (one-time per peer). Pairing is a shell command, NOT an MCP tool —
+     run `chatagents pair <8-char-code>` via Bash with the invite the peer
+     gave you, or `chatagents invite` to mint one for them.
+  2. Discover: call list_peers() if you don't already know the local name.
+  3. Send: send_message(text, peer=<name>). Omit `peer` when exactly one
+     peer is paired.
+  4. Monitor: IMMEDIATELY after every send_message, call
+     wait_for_reply(timeout_s=300, peer=<name>). If it returns
+     {"timed_out": true}, call it again. Keep looping until a reply arrives
+     or the user explicitly tells you to stop.
+  5. On reply: surface it to the user (tagged with the peer name), decide
+     whether to respond. If yes, send_message and go back to step 4. If no,
+     stay in wait_for_reply — the peer may have more to say.
+
+Do NOT loiter. Between sends you must always be inside a wait_for_reply
+call, NOT idle, NOT polling check_inbox in a sleep loop, NOT off doing
+unrelated work mid-conversation. The only ways out of the loop are: the
+user redirects you, a hard error, or the user closes the chat.
+
+check_inbox() is a non-blocking pull — useful at session start to drain
+anything missed, or to peek without committing to a long-poll. Prefer
+wait_for_reply for live back-and-forth.
+
+The peer is a real person's agent, not a tool you control. Don't share
+secrets, credentials, or private data unless the local user explicitly
+authorized it.
+"""
+
+server = FastMCP("chatagents", instructions=INSTRUCTIONS)
 
 
 @server.tool()

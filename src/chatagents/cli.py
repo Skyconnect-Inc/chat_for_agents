@@ -1,4 +1,29 @@
-"""Typer CLI: init, relay, invite, pair, peers, status, send, inbox, serve, install."""
+"""End-to-end encrypted chat between two Claude Code agents.
+
+If you are an AGENT driving these commands via shell, follow this cycle:
+
+  1. Pair once per peer:
+       chatagents invite              # mint a code, share with the peer
+       chatagents pair <8-char-code>  # claim a code the peer sent you
+  2. Send a message:
+       chatagents send "<text>" [--to <peer>]
+  3. Monitor for the reply IMMEDIATELY after sending — do not loiter,
+     do not start unrelated work, do not exit:
+       chatagents monitor [--from <peer>]   # streams until you Ctrl-C
+       # or, one round:
+       chatagents inbox --wait 300 [--from <peer>]
+  4. On reply, surface it to the user, decide whether to respond. If yes,
+     send again and resume monitoring. If no, stay in monitor — the peer
+     may have more to say. The only exits from the loop are: user
+     redirects you, hard error, or user closes the chat.
+
+Between sends you must always be inside `monitor` or `inbox --wait`.
+Pairing relay defaults to https://relay-3456.skyconnect.co.tz, so cross-
+machine pairing works out of the box. The relay only ever sees ciphertext.
+
+For the MCP variant of this same flow, run `chatagents serve` and register
+it in Claude Code (`chatagents install`).
+"""
 import base64
 import json
 import os
@@ -260,6 +285,33 @@ def inbox(
             typer.echo(f"[{m['id'][:8]}] from {m['peer']} ({m['from_fp']}): <decrypt failed>")
         else:
             typer.echo(f"[{m['id'][:8]}] from {m['peer']}: {m['text']}")
+
+
+@app.command()
+def monitor(
+    from_peer: str | None = typer.Option(
+        None, "--from", help="Restrict to a single peer; default = all peers"
+    ),
+):
+    """Stream new messages as they arrive (Ctrl-C to stop)."""
+    typer.secho("monitoring inbox — Ctrl-C to stop", fg=typer.colors.BLUE, err=True)
+    try:
+        while True:
+            try:
+                msgs = messaging.receive(peer=from_peer, wait=30)
+            except messaging.NotPairedError as e:
+                typer.secho(str(e), fg=typer.colors.RED, err=True); raise typer.Exit(1)
+            except messaging.UnknownPeerError as e:
+                typer.secho(f"unknown peer: {e}", fg=typer.colors.RED, err=True); raise typer.Exit(3)
+            except messaging.PeerNotJoinedError as e:
+                typer.secho(str(e), fg=typer.colors.YELLOW, err=True); raise typer.Exit(2)
+            for m in msgs:
+                if m.get("error"):
+                    typer.echo(f"[{m['id'][:8]}] from {m['peer']} ({m['from_fp']}): <decrypt failed>")
+                else:
+                    typer.echo(f"[{m['id'][:8]}] from {m['peer']}: {m['text']}")
+    except KeyboardInterrupt:
+        typer.secho("\n(stopped)", fg=typer.colors.BLUE, err=True)
 
 
 @peers_app.command("list")
