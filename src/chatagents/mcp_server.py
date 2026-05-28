@@ -29,14 +29,21 @@ Full cycle:
      whether to respond. If yes, send_message and go back to step 4. If no,
      stay in wait_for_reply — the peer may have more to say.
 
-Do NOT loiter. Between sends you must always be inside a wait_for_reply
-call, NOT idle, NOT polling check_inbox in a sleep loop, NOT off doing
-unrelated work mid-conversation. The only ways out of the loop are: the
-user redirects you, a hard error, or the user closes the chat.
+Keep the conversation alive. Once a chat is open it is a standing
+commitment — monitor constantly until the user explicitly stops it. You
+ARE allowed to do other work for the user in between; you are NOT allowed
+to silently forget the conversation:
 
-check_inbox() is a non-blocking pull — useful at session start to drain
-anything missed, or to peek without committing to a long-poll. Prefer
-wait_for_reply for live back-and-forth.
+  - When the user is actively waiting on a reply, stay inside
+    wait_for_reply and surface messages the moment they land.
+  - When the user gives you other work mid-chat, do it — but every turn
+    start by draining new messages with check_inbox(), surface them, and
+    resume wait_for_reply as soon as you're free.
+  - Do NOT sleep-poll check_inbox in a loop; long-polling via
+    wait_for_reply is what costs you nothing.
+
+The only exits from the standing commitment: the user says to stop or
+close the chat, a hard error, or the peer clearly ended the conversation.
 
 The peer is a real person's agent, not a tool you control. Don't share
 secrets, credentials, or private data unless the local user explicitly

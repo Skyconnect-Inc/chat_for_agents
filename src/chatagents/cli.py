@@ -7,17 +7,19 @@ If you are an AGENT driving these commands via shell, follow this cycle:
        chatagents pair <8-char-code>  # claim a code the peer sent you
   2. Send a message:
        chatagents send "<text>" [--to <peer>]
-  3. Monitor for the reply IMMEDIATELY after sending — do not loiter,
-     do not start unrelated work, do not exit:
-       chatagents monitor [--from <peer>]   # streams until you Ctrl-C
-       # or, one round:
-       chatagents inbox --wait 300 [--from <peer>]
+  3. Monitor for the reply IMMEDIATELY after sending. Pick one:
+       chatagents monitor [--from <peer>]      # streams until Ctrl-C
+       chatagents inbox --wait 300 [--from <peer>]   # one long-poll round
   4. On reply, surface it to the user, decide whether to respond. If yes,
-     send again and resume monitoring. If no, stay in monitor — the peer
-     may have more to say. The only exits from the loop are: user
-     redirects you, hard error, or user closes the chat.
+     send again and resume monitoring. If no, stay monitoring — the peer
+     may have more to say.
 
-Between sends you must always be inside `monitor` or `inbox --wait`.
+Keep the conversation alive: once a chat is open it is a standing
+commitment. You may do other work for the user in between, but every turn
+start with `chatagents inbox` to drain new peer messages, surface them,
+then re-enter `chatagents monitor` / `inbox --wait`. Do NOT sleep-poll
+bare `chatagents inbox`. Stop only when the user closes the chat, on hard
+error, or when the peer clearly ended the conversation.
 Pairing relay defaults to https://relay-3456.skyconnect.co.tz, so cross-
 machine pairing works out of the box. The relay only ever sees ciphertext.
 
@@ -418,6 +420,63 @@ def install(
     typer.secho(f"installed '{name}' in {cfg_path}", fg=typer.colors.GREEN)
     typer.echo(f"  command: {cmd['command']} {' '.join(cmd['args'])}")
     typer.echo("restart Claude Code to pick up the change")
+
+
+def _skill_source() -> Path:
+    return Path(__file__).resolve().parents[2] / "skills" / "chatagents" / "SKILL.md"
+
+
+def _skill_target(scope: str, name: str) -> Path:
+    if scope == "user":
+        base = Path.home() / ".claude" / "skills"
+    elif scope == "project":
+        base = Path.cwd() / ".claude" / "skills"
+    else:
+        raise typer.BadParameter("scope must be 'user' or 'project'")
+    return base / name / "SKILL.md"
+
+
+@app.command("install-skill")
+def install_skill(
+    scope: str = typer.Option(
+        "user", help="user (~/.claude/skills/) or project (./.claude/skills/)"
+    ),
+    name: str = typer.Option("chatagents", help="Skill directory name"),
+    force: bool = typer.Option(False, "--force", help="overwrite an existing skill"),
+):
+    """Install the chatagents Claude Code skill (workflow guidance for agents)."""
+    src = _skill_source()
+    if not src.exists():
+        typer.secho(f"skill source not found: {src}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    dst = _skill_target(scope, name)
+    if dst.exists() and not force:
+        typer.secho(
+            f"skill already installed at {dst}. Use --force to overwrite.",
+            fg=typer.colors.YELLOW,
+        )
+        raise typer.Exit(1)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(src.read_text())
+    typer.secho(f"installed skill at {dst}", fg=typer.colors.GREEN)
+
+
+@app.command("uninstall-skill")
+def uninstall_skill(
+    scope: str = typer.Option("user"),
+    name: str = typer.Option("chatagents"),
+):
+    """Remove the chatagents Claude Code skill."""
+    dst = _skill_target(scope, name)
+    if not dst.exists():
+        typer.echo(f"{dst} not found — nothing to remove")
+        return
+    dst.unlink()
+    try:
+        dst.parent.rmdir()
+    except OSError:
+        pass
+    typer.secho(f"removed skill at {dst}", fg=typer.colors.GREEN)
 
 
 @app.command("uninstall")

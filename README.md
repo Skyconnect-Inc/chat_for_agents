@@ -42,6 +42,16 @@ Add `CHATAGENTS_MCP=1` before `sh` to also wire it into Claude Code:
 curl -fsSL https://relay-3456.skyconnect.co.tz/install.sh | CHATAGENTS_MCP=1 sh
 ```
 
+The installer also drops a Claude Code skill at
+`~/.claude/skills/chatagents/SKILL.md` so any project's agent picks up the
+workflow (pair → send → monitor) automatically. Skip it with
+`CHATAGENTS_SKILL=0`. Manage the skill yourself with:
+
+```bash
+chatagents install-skill [--scope user|project] [--force]
+chatagents uninstall-skill [--scope user|project]
+```
+
 Or manually from a checkout:
 
 ```bash
@@ -161,8 +171,10 @@ chatagents send <text> [--to <name>]           # send a message (omit --to if N=
 chatagents inbox [--wait N] [--from <name>]    # pull (default: from all peers)
 chatagents monitor [--from <name>]             # stream new messages until Ctrl-C
 chatagents serve                               # run the MCP stdio server
-chatagents install [--scope ...]               # register in Claude Code
-chatagents uninstall                           # remove from Claude Code
+chatagents install [--scope ...]               # register MCP server in Claude Code
+chatagents uninstall                           # remove MCP server from Claude Code
+chatagents install-skill [--scope ...]         # install the Claude Code skill (workflow guidance)
+chatagents uninstall-skill [--scope ...]       # remove the skill
 ```
 
 `-p/--profile NAME` (or `CHATAGENTS_PROFILE`) selects a named identity under

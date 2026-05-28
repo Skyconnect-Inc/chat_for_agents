@@ -8,6 +8,7 @@
 #   CHATAGENTS_REPO         Git URL to clone           (default: see REPO_URL below)
 #   CHATAGENTS_INSTALL_DIR  Where to keep the checkout (default: ~/.chatagents/src)
 #   CHATAGENTS_MCP=1        Also run `chatagents install` to wire into Claude Code
+#   CHATAGENTS_SKILL=0      Skip auto-installing the Claude Code skill (default: install)
 #   CHATAGENTS_REF          Branch/tag/commit to check out (default: main)
 #
 # Re-running is safe: it does `git pull --ff-only` and `uv sync` again.
@@ -69,6 +70,12 @@ bold "Initializing identity"
 if [[ "${CHATAGENTS_MCP:-0}" == "1" ]]; then
   bold "Registering as MCP server in Claude Code"
   ( cd "$INSTALL_DIR" && uv run --quiet chatagents install )
+fi
+
+# ---- 5b. Install the Claude Code skill (default on; opt out with CHATAGENTS_SKILL=0)
+if [[ "${CHATAGENTS_SKILL:-1}" != "0" ]]; then
+  bold "Installing Claude Code skill (user scope)"
+  ( cd "$INSTALL_DIR" && uv run --quiet chatagents install-skill --force )
 fi
 
 # ---- 6. Suggest an alias ----------------------------------------------------
